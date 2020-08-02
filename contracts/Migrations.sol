@@ -28,51 +28,33 @@ contract TestDependencies {
   bytes32 constant REVERSE_REGISTRAR_LABEL = keccak256("reverse");
   bytes32 constant ADDR_LABEL = keccak256("addr");
 
-  ENSRegistry public ens;
-  BaseRegistrarImplementation public ethRegistrar;
-  ReverseRegistrar public reverseRegistrar;
-  PublicResolver public publicResolver;
-
   event AllAddresses(address ens,
                      address ethRegistrar,
+                     address publicResolver,
                      address reverseRegistrar,
-                     address publicResolver);
+                     address controller);
 
   function namehash(bytes32 node, bytes32 label) public pure returns (bytes32) {
     return keccak256(abi.encodePacked(node, label));
   }
 
-  function getENSAddress() external view returns (address) {
-    return address(ens);
-  }
-  function getRegistrarAddress() external view returns (address) {
-    return address(ethRegistrar);
-  }
-  function getResolverAddress() external view returns (address) {
-    return address(publicResolver);
-  }
-  function getReverseAddress() external view returns (address) {
-    return address(reverseRegistrar);
-  }
-
-  constructor() public {
-    ens = new ENSRegistry();
-    publicResolver = new PublicResolver(ens);
-
+  constructor(ENSRegistry ens,
+              BaseRegistrar ethRegistrar,
+              PublicResolver publicResolver,
+              ReverseRegistrar reverseRegistrar) public {
     // Set up the resolver
     bytes32 resolverNode = namehash(bytes32(0), RESOLVER_LABEL);
-    /* bytes32 tldNode = namehash(bytes32(0), TLD_LABEL); */
+    bytes32 tldNode = namehash(bytes32(0), TLD_LABEL);
 
-    ens.setSubnodeOwner(bytes32(0), RESOLVER_LABEL, address(this));
+    /* ens.setSubnodeOwner(bytes32(0), RESOLVER_LABEL, address(this)); */
 
-    ens.setResolver(resolverNode, address(publicResolver));
-    publicResolver.setAddr(resolverNode, address(publicResolver));
+    /* ens.setResolver(resolverNode, address(publicResolver)); */
+    /* publicResolver.setAddr(resolverNode, address(publicResolver)); */
 
-    /* ens.setResolver(tldNode, address(publicResolver)); */
-    /* publicResolver.setAddr(tldNode, address(publicResolver)); */
+    ens.setResolver(tldNode, address(publicResolver));
+    publicResolver.setAddr(tldNode, address(publicResolver));
 
     // Create a ETH registrar for the TLD
-    ethRegistrar = new BaseRegistrarImplementation(ens, namehash(bytes32(0), TLD_LABEL));
     ens.setSubnodeOwner(bytes32(0), TLD_LABEL, address(ethRegistrar));
 
     DummyPriceOracle prices = new DummyPriceOracle();
@@ -82,12 +64,15 @@ contract TestDependencies {
     ethRegistrar.addController(address(controller));
 
     // Construct a new reverse registrar and point it at the public resolver
-    reverseRegistrar = new ReverseRegistrar(ens, NameResolver(address(publicResolver)));
 
     // Set up the reverse registrar
     ens.setSubnodeOwner(bytes32(0), REVERSE_REGISTRAR_LABEL, address(this));
     ens.setSubnodeOwner(namehash(bytes32(0), REVERSE_REGISTRAR_LABEL), ADDR_LABEL, address(reverseRegistrar));
 
-    emit AllAddresses(address(ens), address(ethRegistrar), address(publicResolver), address(reverseRegistrar));
+    emit AllAddresses(address(ens),
+                      address(ethRegistrar),
+                      address(publicResolver),
+                      address(reverseRegistrar),
+                      address(controller));
   }
 }
