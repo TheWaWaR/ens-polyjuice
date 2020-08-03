@@ -101,13 +101,21 @@ def gen_node(name):
 def gen_label(name):
     return hexlify(sha3(name)).decode('utf-8')
 
+
+def call(addr, fn_name, args, name):
+    args = ''.join(['0x', fn_name, *args])
+    result = call_contract(addr, args)
+    commit_tx(result, 'call-{}-{}'.format(name, args)[:45])
+
 def main():
     tld_label = gen_label(b'eth')
     resolver_label = gen_label(b'resolver')
     reverse_label = gen_label(b'reverse')
+    addr_label = gen_label(b'addr')
 
     tld_node = gen_node(b'eth')
     resolver_node = gen_node(b'resolver')
+    reverse_node = gen_node(b'reverse')
 
     ens = create_contract(get_code('build/contracts/ENSRegistry.json'))
     commit_tx(ens, 'create-ENSRegistry')
@@ -137,25 +145,84 @@ def main():
     reverse_registrar_addr = reverse_registrar['entrance_contract']
     commit_tx(reverse_registrar, 'create-ReverseRegistrar')
 
-    def set_subnode_owner(label, addr):
-        zero_node = '0000000000000000000000000000000000000000000000000000000000000000'
-        fn_set_subnode_owner = '06ab5923'
-        args = '0x' + fn_set_subnode_owner + zero_node + label + addr_to_arg(addr)
-        set_resolver_owner = call_contract(ens_addr, args)
-        commit_tx(set_resolver_owner, 'call-setSubnodeOwner-{}'.format(label))
+    fn_set_subnode_owner = '06ab5923'
+    fn_set_resolver = '1896f70a'
+    fn_set_addr = 'd5fa2b00'
+    fn_add_controller = 'a7fc7a07'
+    zero_node = '0000000000000000000000000000000000000000000000000000000000000000'
 
-    # TODO:
-    # Setup Resolver
-    set_subnode_owner(resolver_label, SENDER1)
-    # Setup Registrar
-    # Setup ReverseRegistrar
-    # Setup Controller
+    ## Setup Resolver
+    call(
+        ens_addr,
+        fn_set_subnode_owner,
+        [zero_node, resolver_label, addr_to_arg(SENDER1)],
+        'setSubnodeOwner',
+    )
+    # TODO: Change to tld_node
+    call(
+        ens_addr,
+        fn_set_resolver,
+        [resolver_node, addr_to_arg(public_resolver_addr)],
+        'setResolver',
+    )
+    call(
+        public_resolver_addr,
+        fn_set_addr,
+        [resolver_node, addr_to_arg(public_resolver_addr)],
+        'setAddr',
+    )
+    ## Setup Registrar
+    call(
+        ens_addr,
+        fn_set_subnode_owner,
+        [zero_node, tld_label, addr_to_arg(eth_registrar_addr)],
+        'setSubnodeOwner',
+    )
+    ## Setup ReverseRegistrar
+    call(
+        ens_addr,
+        fn_set_subnode_owner,
+        [zero_node, reverse_label, addr_to_arg(SENDER1)],
+        'setSubnodeOwner',
+    )
+    call(
+        ens_addr,
+        fn_set_subnode_owner,
+        [reverse_node, addr_label, addr_to_arg(reverse_registrar_addr)],
+        'setSubnodeOwner',
+    )
+    ## Setup Controller
+    price_oracle = create_contract(get_code('build/contracts/DummyPriceOracle.json'))
+    price_oracle_addr = price_oracle['entrance_contract']
+    commit_tx(price_oracle, 'create-DummyPriceOracle')
+
+    constructor_args = ''.join([
+        addr_to_arg(eth_registrar_addr),
+        addr_to_arg(price_oracle_addr),
+        '0000000000000000000000000000000000000000000000000000000000000001',
+        '0000000000000000000000000000000000000000000000000000000000000e10',
+    ])
+    controller = create_contract(
+        get_code('build/contracts/ETHRegistrarController.json'),
+        constructor_args = constructor_args,
+    )
+    controller_addr = controller['entrance_contract']
+    commit_tx(controller, 'create-Controller')
+
+    call(
+        eth_registrar_addr,
+        fn_add_controller,
+        [addr_to_arg(controller_addr)],
+        'addController',
+    )
 
     print('========================================')
     print('ENSRegistry: {}'.format(ens_addr))
     print('PublicResolver: {}'.format(public_resolver_addr))
     print('BaseRegistrarImplementation: {}'.format(eth_registrar_addr))
-    print('ReverseRegistrar: {}'.format(reverse_registrar['entrance_contract']))
+    print('ReverseRegistrar: {}'.format(reverse_registrar_addr))
+    print('DummyPriceOracle: {}'.format(price_oracle_addr))
+    print('Controller: {}'.format(controller_addr))
     print('========================================')
 
 if __name__ == '__main__':
