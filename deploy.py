@@ -151,11 +151,12 @@ def main():
     fn_add_controller = 'a7fc7a07'
     zero_node = '0000000000000000000000000000000000000000000000000000000000000000'
 
+    account0 = SENDER1
     ## Setup Resolver
     call(
         ens_addr,
         fn_set_subnode_owner,
-        [zero_node, resolver_label, addr_to_arg(SENDER1)],
+        [zero_node, resolver_label, addr_to_arg(account0)],
         'setSubnodeOwner',
     )
     # TODO: Change to tld_node
@@ -182,7 +183,7 @@ def main():
     call(
         ens_addr,
         fn_set_subnode_owner,
-        [zero_node, reverse_label, addr_to_arg(SENDER1)],
+        [zero_node, reverse_label, addr_to_arg(account0)],
         'setSubnodeOwner',
     )
     call(

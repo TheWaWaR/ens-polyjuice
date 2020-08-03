@@ -49,9 +49,46 @@ def after(resp):
     return resp
 
 
+
 @jsonrpc.method('eth_getLogs')
-def get_logs() -> str:
-    return 'get_logs'
+def get_logs(filter: Dict) -> List:
+    # {
+    #     "fromBlock":"0x6341",
+    #     "toBlock":"latest",
+    #     "address":"0xce2951d57b56a928b75f577f0dd53bcf0843fdf6",
+    #     "topics":[
+    #         "0xce0457fe73731f824cc272376169235128c118b49d344817417c6d108d155e82",
+    #         "0x93cdeb708b7545dc668eb9280176169d1c33cfd8ed6f04690a0bcc88a93fc4ae",
+    #     ],
+    # }
+    from_block = int(filter['fromBlock'], 0)
+    to_block = filter['toBlock']
+    to_block = None if to_block == 'latest' else int(to_block, 0)
+    # {
+    #   "logIndex": "0x1", // 1
+    #   "blockNumber":"0x1b4", // 436
+    #   "blockHash": "0x8216c5785ac562ff41e2dcfdf5785ac562ff41e2dcfdf829c5a142f1fccd7d",
+    #   "transactionHash":  "0xdf829c5a142f1fccd7d8216c5785ac562ff41e2dcfdf5785ac562ff41e2dcf",
+    #   "transactionIndex": "0x0", // 0
+    #   "address": "0x16c5785ac562ff41e2dcfdf829c5a142f1fccd7d",
+    #   "data":"0x0000000000000000000000000000000000000000000000000000000000000000",
+    #   "topics": ["0x59ebeb90bc63057b6515673c3ecf9438e5058bca0f92585014eced636878c9a5"]
+    # }
+    logs = send_jsonrpc(
+        polyjuice_rpc_url,
+        'get_logs',
+        [from_block, to_block, filter['address'], filter['topics'], None],
+    )
+    return [{
+        'logIndex': '0x1',
+        'blockNumber': hex(info['block_number']),
+        'blockHash': '0x11111111111111111111111111111111111111111111111111111111111111',
+        'transactionHash': '0x11111111111111111111111111111111111111111111111111111111111111',
+        'transactionIndex': hex(info['tx_index']),
+        'address': info['log']['address'],
+        'data': info['log']['data'],
+        'topics': info['log']['topics'],
+    } for info in logs]
 
 @jsonrpc.method('eth_call')
 def call(program: Dict, tag: Union[int, str]) -> str:
@@ -73,7 +110,7 @@ def tip_number() -> str:
     return send_jsonrpc(ckb_rpc_url, 'get_tip_block_number')
 
 @jsonrpc.method('eth_getBlockByNumber')
-def get_block_by_number(number: str, full_tx: bool) -> Dict[Any, Any]:
+def get_block_by_number(number: str, full_tx: bool) -> Dict:
     #     "result": {
     #   "difficulty": "0x4ea3f27bc",
     #   "extraData": "0x476574682f4c5649562f76312e302e302f6c696e75782f676f312e342e32",
