@@ -49,6 +49,10 @@ def after(resp):
     return resp
 
 
+@app.route('/graphql', methods=['POST', 'GET', 'OPTIONS'])
+def graphql():
+    return '{}'
+
 
 @jsonrpc.method('eth_getLogs')
 def get_logs(filter: Dict) -> List:
@@ -82,8 +86,8 @@ def get_logs(filter: Dict) -> List:
     return [{
         'logIndex': '0x1',
         'blockNumber': hex(info['block_number']),
-        'blockHash': '0x11111111111111111111111111111111111111111111111111111111111111',
-        'transactionHash': '0x11111111111111111111111111111111111111111111111111111111111111',
+        'blockHash': '0x22221111111111111111111111111111111111111111111111111111112222',
+        'transactionHash': '0x33331111111111111111111111111111111111111111111111111111113333',
         'transactionIndex': hex(info['tx_index']),
         'address': info['log']['address'],
         'data': info['log']['data'],
@@ -157,7 +161,7 @@ def get_block_by_number(number: str, full_tx: bool) -> Dict:
         'number': header['number'],
         'timestamp': hex(int(int(header['timestamp'], 0) / 1000)),
         'transactions': [],
-        "transactionsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+        "transactionsRoot": "0x111111111111111111111111111111111111111111111111111111111111aaaa",
         'uncles': [],
     }
 
@@ -167,7 +171,8 @@ def accounts() -> List[str]:
 
 @jsonrpc.method('net_version')
 def version() -> str:
-    return '3'
+    # private network
+    return '103'
 
 
 if __name__ == '__main__':

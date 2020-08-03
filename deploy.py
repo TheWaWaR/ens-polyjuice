@@ -153,25 +153,25 @@ def main():
 
     account0 = SENDER1
     ## Setup Resolver
-    call(
-        ens_addr,
-        fn_set_subnode_owner,
-        [zero_node, resolver_label, addr_to_arg(account0)],
-        'setSubnodeOwner',
-    )
-    # TODO: Change to tld_node
-    call(
-        ens_addr,
-        fn_set_resolver,
-        [resolver_node, addr_to_arg(public_resolver_addr)],
-        'setResolver',
-    )
-    call(
-        public_resolver_addr,
-        fn_set_addr,
-        [resolver_node, addr_to_arg(public_resolver_addr)],
-        'setAddr',
-    )
+    for (label, node) in [(resolver_label, resolver_node), (tld_label, tld_node)]:
+        call(
+            ens_addr,
+            fn_set_subnode_owner,
+            [zero_node, label, addr_to_arg(account0)],
+            'setSubnodeOwner',
+        )
+        call(
+            ens_addr,
+            fn_set_resolver,
+            [node, addr_to_arg(public_resolver_addr)],
+            'setResolver',
+        )
+        call(
+            public_resolver_addr,
+            fn_set_addr,
+            [node, addr_to_arg(public_resolver_addr)],
+            'setAddr',
+        )
     ## Setup Registrar
     call(
         ens_addr,

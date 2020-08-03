@@ -1,3 +1,4 @@
 export REACT_APP_STAGE=local
-export REACT_APP_ENS_ADDRESS=0xce2951d57b56a928b75f577f0dd53bcf0843fdf6
+export REACT_APP_ENS_ADDRESS=0xd4472ccbbe5daa20e50ca47432deec33b09b3e11
 export REACT_APP_LABELS='{"4f5b812789fc606be1b3b16908db13fc7a9adf7ca72641f84d75b47069d3d7f0":"eth"}'
+export REACT_APP_GRAPH_NODE_URI=http://localhost:8545/graphql
