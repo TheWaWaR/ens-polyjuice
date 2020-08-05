@@ -11,53 +11,40 @@ from namehash import namehash, sha3
 
 SENDER1 = "0xc8328aabcd9b9e8e64fbc566c4385c3bdeb219d7"
 SENDER1_PRIVKEY = "d00c06bfd800d27397002dca6fb0993d5ba6399b4238b2f29ee9deb97593d2bc"
-target_dir = sys.argv[1]
-ckb_bin_path = sys.argv[2]
-ckb_rpc_url = sys.argv[3]
-polyjuice_rpc_url = sys.argv[4] if len(sys.argv) == 5 else "http://localhost:8214"
-
-ckb_dir = os.path.dirname(os.path.abspath(ckb_bin_path))
-privkey1_path = os.path.join(target_dir, "{}.privkey".format(SENDER1))
-os.environ["API_URL"] = ckb_rpc_url
-
-if not os.path.exists(privkey1_path):
-    with open(privkey1_path, 'w') as f:
-        f.write(SENDER1_PRIVKEY)
 
 
-def send_jsonrpc(method, params=[]):
+def send_jsonrpc(url, method, params=[]):
     payload = {
         "id": 0,
         "jsonrpc": "2.0",
         "method": method,
         "params": params,
     }
-    cmd = "curl -s -H 'content-type: application/json' -d '{}' {}".format(json.dumps(payload), polyjuice_rpc_url)
+    cmd = "curl -s -H 'content-type: application/json' -d '{}' {}".format(json.dumps(payload), url)
     output = subprocess.check_output(cmd, shell=True).strip().decode("utf-8")
     resp = json.loads(output)
     if "error" in resp:
-        print("JSONRPC ERROR: {}".format(resp["error"]))
-        exit(-1)
+        raise ValueError("JSONRPC ERROR: {}".format(resp["error"]))
     return resp["result"]
 
-def create_contract(binary, constructor_args="", sender=SENDER1):
+def create_contract(url, binary, constructor_args="", sender=SENDER1):
     print("[create contract]:")
     print("  sender = {}".format(sender))
     print("  binary = 0x{}".format(binary))
     print("    args = 0x{}".format(constructor_args))
-    result = send_jsonrpc("create", [sender, "0x{}{}".format(binary, constructor_args)])
+    result = send_jsonrpc(url, "create", [sender, "0x{}{}".format(binary, constructor_args)])
     print("  >> created address = {}".format(result["entrance_contract"]))
     return result
 
-def call_contract(contract_address, args, is_static=False, sender=SENDER1):
+def call_contract(url, contract_address, args, is_static=False, sender=SENDER1):
     method = "static_call" if is_static else "call"
     print("[{} contract]:".format(method))
     print("   sender = {}".format(sender))
     print("  address = {}".format(contract_address))
     print("     args = {}".format(args))
-    return send_jsonrpc(method, [sender, contract_address, args])
+    return send_jsonrpc(url, method, [sender, contract_address, args])
 
-def mine_blocks(n=5):
+def mine_blocks(ckb_bin_path, ckb_dir, n=5):
     run_cmd("{} miner -C {} -l {}".format(ckb_bin_path, ckb_dir, n))
     time.sleep(0.5)
 
@@ -68,7 +55,7 @@ def run_cmd(cmd, print_output=True):
         print("[Output]: {}".format(output))
     return output
 
-def commit_tx(result, action_name, privkey_path=privkey1_path):
+def commit_tx(target_dir, ckb_bin_path, ckb_dir, ckb_rpc_url, privkey_path, result, action_name):
     result_path = os.path.join(target_dir, "{}.json".format(action_name))
     with open(result_path, "w") as f:
         json.dump(result, f, indent=4)
@@ -79,8 +66,9 @@ def commit_tx(result, action_name, privkey_path=privkey1_path):
     run_cmd("cat {} | jq .transaction > {}".format(tx_path, tx_raw_path))
     # run_cmd("ckb-cli mock-tx dump --tx-file {} --output-file {}".format(tx_raw_path, tx_moack_path))
     for retry in range(3):
+        os.environ["API_URL"] = ckb_rpc_url
         tx_hash = run_cmd("ckb-cli tx send --tx-file {} --skip-check".format(tx_path)).strip()
-        mine_blocks()
+        mine_blocks(ckb_bin_path, ckb_dir)
         tx_content = run_cmd("ckb-cli rpc get_transaction --hash {}".format(tx_hash), print_output=False)
         if tx_content.find(tx_hash) > -1:
             print("Transaction sent: {}".format(tx_hash))
@@ -102,12 +90,29 @@ def gen_label(name):
     return hexlify(sha3(name)).decode('utf-8')
 
 
-def call(addr, fn_name, args, name):
+def call(target_dir, ckb_bin_path, ckb_rpc_url, polyjuice_rpc_url, ckb_dir, privkey_path,
+         addr, fn_name, args, name):
     args = ''.join(['0x', fn_name, *args])
-    result = call_contract(addr, args)
-    commit_tx(result, 'call-{}-{}'.format(name, args)[:45])
+    result = call_contract(polyjuice_rpc_url, addr, args)
+    commit_tx(
+        target_dir, ckb_bin_path, ckb_dir, ckb_rpc_url, privkey_path,
+        result, 'call-{}-{}'.format(name, args)[:45],
+    )
+    return result
 
-def main():
+def main(target_dir, ckb_bin_path, ckb_rpc_url, polyjuice_rpc_url, ckb_dir, privkey1_path):
+    def local_commit_tx(result, action_name):
+        commit_tx(
+            target_dir, ckb_bin_path, ckb_dir, ckb_rpc_url, privkey1_path,
+            result, action_name,
+        )
+
+    def local_call(addr, fn_name, args, name):
+        return call(
+            target_dir, ckb_bin_path, ckb_rpc_url, polyjuice_rpc_url, ckb_dir, privkey1_path,
+            addr, fn_name, args, name,
+        )
+
     tld_label = gen_label(b'eth')
     resolver_label = gen_label(b'resolver')
     reverse_label = gen_label(b'reverse')
@@ -117,85 +122,88 @@ def main():
     resolver_node = gen_node(b'resolver')
     reverse_node = gen_node(b'reverse')
 
-    ens = create_contract(get_code('build/contracts/ENSRegistry.json'))
-    commit_tx(ens, 'create-ENSRegistry')
+    ens = create_contract(polyjuice_rpc_url, get_code('build/contracts/ENSRegistry.json'))
+    local_commit_tx(ens, 'create-ENSRegistry')
     ens_addr = ens['entrance_contract'];
 
     ens_addr_arg = addr_to_arg(ens_addr)
     public_resolver = create_contract(
+        polyjuice_rpc_url,
         get_code('build/contracts/PublicResolver.json'),
         constructor_args=ens_addr_arg,
     )
-    commit_tx(public_resolver, 'create-PublicResolver')
+    local_commit_tx(public_resolver, 'create-PublicResolver')
     public_resolver_addr = public_resolver['entrance_contract'];
 
     constructor_args = ens_addr_arg + tld_node
     eth_registrar = create_contract(
+        polyjuice_rpc_url,
         get_code('build/contracts/BaseRegistrarImplementation.json'),
         constructor_args=constructor_args,
     )
-    commit_tx(eth_registrar, 'create-BaseRegistrarImplementation')
+    local_commit_tx(eth_registrar, 'create-BaseRegistrarImplementation')
     eth_registrar_addr = eth_registrar['entrance_contract'];
 
     constructor_args = ens_addr_arg + addr_to_arg(public_resolver_addr)
     reverse_registrar = create_contract(
+        polyjuice_rpc_url,
         get_code('build/contracts/ReverseRegistrar.json'),
         constructor_args=constructor_args,
     )
     reverse_registrar_addr = reverse_registrar['entrance_contract']
-    commit_tx(reverse_registrar, 'create-ReverseRegistrar')
+    local_commit_tx(reverse_registrar, 'create-ReverseRegistrar')
 
     fn_set_subnode_owner = '06ab5923'
     fn_set_resolver = '1896f70a'
     fn_set_addr = 'd5fa2b00'
     fn_add_controller = 'a7fc7a07'
+    fn_set_authorisation = '3e9ce794'
+    fn_set_interface = 'e59d895d'
     zero_node = '0000000000000000000000000000000000000000000000000000000000000000'
 
     account0 = SENDER1
     ## Setup Resolver
-    for (label, node) in [(resolver_label, resolver_node), (tld_label, tld_node)]:
-        call(
+    for (base_node, label, node) in [(zero_node, resolver_label, resolver_node),
+                                     (zero_node, tld_label, tld_node),
+                                     (tld_node, gen_label(b'resolver'), gen_node(b'resolver.eth'))]:
+        local_call(
             ens_addr,
             fn_set_subnode_owner,
-            [zero_node, label, addr_to_arg(account0)],
+            [base_node, label, addr_to_arg(account0)],
             'setSubnodeOwner',
         )
-        call(
+        local_call(
             ens_addr,
             fn_set_resolver,
             [node, addr_to_arg(public_resolver_addr)],
             'setResolver',
         )
-        call(
+        local_call(
             public_resolver_addr,
             fn_set_addr,
             [node, addr_to_arg(public_resolver_addr)],
             'setAddr',
         )
-    ## Setup Registrar
-    call(
-        ens_addr,
-        fn_set_subnode_owner,
-        [zero_node, tld_label, addr_to_arg(eth_registrar_addr)],
-        'setSubnodeOwner',
-    )
     ## Setup ReverseRegistrar
-    call(
+    local_call(
         ens_addr,
         fn_set_subnode_owner,
         [zero_node, reverse_label, addr_to_arg(account0)],
         'setSubnodeOwner',
     )
-    call(
+    local_call(
         ens_addr,
         fn_set_subnode_owner,
         [reverse_node, addr_label, addr_to_arg(reverse_registrar_addr)],
         'setSubnodeOwner',
     )
     ## Setup Controller
-    price_oracle = create_contract(get_code('build/contracts/DummyPriceOracle.json'))
+    price_oracle = create_contract(
+        polyjuice_rpc_url,
+        get_code('build/contracts/DummyPriceOracle.json'),
+    )
     price_oracle_addr = price_oracle['entrance_contract']
-    commit_tx(price_oracle, 'create-DummyPriceOracle')
+    local_commit_tx(price_oracle, 'create-DummyPriceOracle')
 
     constructor_args = ''.join([
         addr_to_arg(eth_registrar_addr),
@@ -204,17 +212,35 @@ def main():
         '0000000000000000000000000000000000000000000000000000000000000e10',
     ])
     controller = create_contract(
+        polyjuice_rpc_url,
         get_code('build/contracts/ETHRegistrarController.json'),
         constructor_args = constructor_args,
     )
     controller_addr = controller['entrance_contract']
-    commit_tx(controller, 'create-Controller')
+    local_commit_tx(controller, 'create-Controller')
 
-    call(
+    local_call(
         eth_registrar_addr,
         fn_add_controller,
         [addr_to_arg(controller_addr)],
         'addController',
+    )
+    ## Set Interface
+    # permanentRegistrar: '0x018fac06'
+    permanent_registrar = '018fac06' + '00000000000000000000000000000000000000000000000000000000'
+    local_call(
+        public_resolver_addr,
+        fn_set_interface,
+        [tld_node, permanent_registrar, addr_to_arg(controller_addr)],
+        'setInterface',
+    )
+
+    ## Setup Registrar
+    local_call(
+        ens_addr,
+        fn_set_subnode_owner,
+        [zero_node, tld_label, addr_to_arg(eth_registrar_addr)],
+        'setSubnodeOwner',
     )
 
     print('========================================')
@@ -227,4 +253,22 @@ def main():
     print('========================================')
 
 if __name__ == '__main__':
-    main()
+    target_dir = sys.argv[1]
+    ckb_bin_path = sys.argv[2]
+    ckb_rpc_url = sys.argv[3]
+    polyjuice_rpc_url = sys.argv[4] if len(sys.argv) == 5 else "http://localhost:8214"
+
+    ckb_dir = os.path.dirname(os.path.abspath(ckb_bin_path))
+    privkey1_path = os.path.join(target_dir, "{}.privkey".format(SENDER1))
+
+    if not os.path.exists(privkey1_path):
+        with open(privkey1_path, 'w') as f:
+            f.write(SENDER1_PRIVKEY)
+    main(
+        target_dir,
+        ckb_bin_path,
+        ckb_rpc_url,
+        polyjuice_rpc_url,
+        ckb_dir,
+        privkey1_path,
+    )
