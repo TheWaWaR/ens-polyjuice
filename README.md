@@ -42,6 +42,8 @@ Controller                  : 0x5ee8bc8188234b173a00da85400f061363f83da6
 
 ## Run polyjuice proxy server
 
+polyjuice proxy server is for proxying web3 rpc request to ckb and polyjuice.
+
 ``` bash
 python3 server.py <listen-port> <tmp-dir> <ckb-binary-path> <ckb-rpc-url> <polyjuice-rpc-url>
 ```
@@ -60,6 +62,7 @@ docker-compose up
 Then register ENS Subgraph:
 ``` bash
 git clone https://github.com/ensdomains/ens-subgraph.git
+cd ens-subgraph
 yarn install
 yarn setup
 ```
@@ -68,6 +71,7 @@ yarn setup
 
 ``` bash
 git clone https://github.com/ensdomains/ens-app.git
+cd ens-app
 git checkout tags/v1.2.3
 yarn install
 ```
