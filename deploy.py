@@ -243,14 +243,14 @@ def main(target_dir, ckb_bin_path, ckb_rpc_url, polyjuice_rpc_url, ckb_dir, priv
         'setSubnodeOwner',
     )
 
-    print('========================================')
-    print('ENSRegistry: {}'.format(ens_addr))
-    print('PublicResolver: {}'.format(public_resolver_addr))
-    print('BaseRegistrarImplementation: {}'.format(eth_registrar_addr))
-    print('ReverseRegistrar: {}'.format(reverse_registrar_addr))
-    print('DummyPriceOracle: {}'.format(price_oracle_addr))
-    print('Controller: {}'.format(controller_addr))
-    print('========================================')
+    print('========================================================================')
+    print('ENSRegistry                 : {}'.format(ens_addr))
+    print('PublicResolver              : {}'.format(public_resolver_addr))
+    print('BaseRegistrarImplementation : {}'.format(eth_registrar_addr))
+    print('ReverseRegistrar            : {}'.format(reverse_registrar_addr))
+    print('DummyPriceOracle            : {}'.format(price_oracle_addr))
+    print('Controller                  : {}'.format(controller_addr))
+    print('========================================================================')
 
 if __name__ == '__main__':
     target_dir = sys.argv[1]
