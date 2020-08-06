@@ -45,7 +45,7 @@ Controller                  : 0x5ee8bc8188234b173a00da85400f061363f83da6
 polyjuice proxy server is for proxying web3 rpc request to ckb and polyjuice.
 
 ``` bash
-python3 server.py <listen-port> <tmp-dir> <ckb-binary-path> <ckb-rpc-url> <polyjuice-rpc-url>
+python3 server.py 8545 <tmp-dir> <ckb-binary-path> <ckb-rpc-url> <polyjuice-rpc-url>
 ```
 
 ## Run GraphQL server
@@ -84,7 +84,7 @@ export REACT_APP_MIGRATION_COMPLETE=True
 export REACT_APP_ENS_ADDRESS=0x4187580354c12b2534388a81010cadde5cda4691
 export REACT_APP_LABELS='{"4f5b812789fc606be1b3b16908db13fc7a9adf7ca72641f84d75b47069d3d7f0":"eth"}'
 # The graph-node listen address
-export REACT_APP_GRAPH_NODE_URI=http://localhost:8545/graphql
+export REACT_APP_GRAPH_NODE_URI=http://127.0.0.1:8000/subgraphs/name/graphprotocol/ens
 ```
 
 Start the app:
