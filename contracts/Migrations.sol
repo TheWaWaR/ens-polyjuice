@@ -1,11 +1,11 @@
 pragma solidity ^0.5.0;
 
-import "@ensdomains/ens/contracts/ENSRegistry.sol";
+import { ENSRegistry } from "@ensdomains/ens/contracts/ENSRegistry.sol";
 /* import "@ensdomains/ens/contracts/FIFSRegistrar.sol"; */
-import "@ensdomains/ens/contracts/ReverseRegistrar.sol";
-import "@ensdomains/resolver/contracts/PublicResolver.sol";
-import "@ensdomains/ethregistrar/contracts/BaseRegistrarImplementation.sol";
-import "@ensdomains/ethregistrar/contracts/ETHRegistrarController.sol";
+import { ReverseRegistrar } from "@ensdomains/ens/contracts/ReverseRegistrar.sol";
+import { PublicResolver } from "@ensdomains/resolver/contracts/PublicResolver.sol";
+import { BaseRegistrar, BaseRegistrarImplementation } from "@ensdomains/ethregistrar/contracts/BaseRegistrarImplementation.sol";
+import { ETHRegistrarController, PriceOracle } from "@ensdomains/ethregistrar/contracts/ETHRegistrarController.sol";
 
 contract DummyPriceOracle is PriceOracle {
   constructor() public {}

@@ -1,0 +1,27 @@
+{
+  "name": "ens-polyjuice",
+  "version": "1.0.0",
+  "description": "",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "@ensdomains/ens": "^0.4.5",
+    "@ensdomains/ethregistrar": "^2.0.4",
+    "@ensdomains/resolver": "^0.2.4"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TheWaWaR/ens-polyjuice.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/TheWaWaR/ens-polyjuice/issues"
+  },
+  "homepage": "https://github.com/TheWaWaR/ens-polyjuice#readme"
+}
