@@ -3,13 +3,14 @@
 
 Please see: https://github.com/nervosnetwork/polyjuice/blob/develop/README.md
 
-## Deploy ENS contracts
+## Deploy [ENS](https://ens.domains/) contracts
 
 First install ens contracts and compile them
 
-Install node first required version v10.22.0 (lts/dubnium)
+Install node first. (required version v10.22.0 (lts/dubnium))
 
 ``` bash
+git clone https://github.com/TheWaWaR/ens-polyjuice.git
 npm install -g truffle
 npm install
 truffle compile
