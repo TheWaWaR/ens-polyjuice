@@ -11,17 +11,23 @@ from flask import Flask, request
 from flask_jsonrpc import JSONRPC
 from flask_jsonrpc.exceptions import JSONRPCError
 from flask_cors import CORS
-from deploy import call_contract, commit_tx, send_jsonrpc, SENDER1, SENDER1_PRIVKEY
+from deploy import call_contract, commit_tx, send_jsonrpc, SENDER1, SENDER1_PRIVKEY, eoa_accounts
 
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 jsonrpc = JSONRPC(app, '/', enable_web_browsable_api=True)
 
+if len(sys.argv) < 6:
+    print('USAGE:\n  python3 server.py 8545 <tmp-dir> <ckb-binary-path> <ckb-rpc-url> <eoa-address> <polyjuice-rpc-url> ')
+    exit(-1)
 target_dir = sys.argv[2]
 ckb_bin_path = sys.argv[3]
 ckb_rpc_url = sys.argv[4]
-polyjuice_rpc_url = sys.argv[5] if len(sys.argv) == 6 else "http://localhost:8214"
+eoa_account = sys.argv[5]
+polyjuice_rpc_url = sys.argv[6] if len(sys.argv) == 7 else "http://localhost:8214"
+
+eoa_accounts[SENDER1] = [eoa_account]
 
 ckb_dir = os.path.dirname(os.path.abspath(ckb_bin_path))
 privkey1_path = os.path.join(target_dir, "{}.privkey".format(SENDER1))
@@ -93,7 +99,8 @@ def get_logs(filter: Dict) -> List:
 def eth_call(program: Dict, tag: Union[int, str]) -> str:
     destination = program['to'].lower()
     data = program['data']
-    return send_jsonrpc(polyjuice_rpc_url, 'static_call', [SENDER1, destination, data])['return_data']
+    eoa_account = eoa_accounts[SENDER1][0]
+    return send_jsonrpc(polyjuice_rpc_url, 'static_call', [eoa_account, destination, data])['return_data']
 
 @jsonrpc.method('eth_getCode')
 def get_code(address: str, tag: Union[int, str]) -> str:
@@ -194,10 +201,12 @@ def send_transaction(tx: Dict) -> str:
     sender = tx['from'].lower()
     contract_address = tx['to'].lower()
     input_data = tx['data'].lower()
-    receipt = call_contract(polyjuice_rpc_url, contract_address, input_data, sender=SENDER1)
+    value = int(tx.get('value', '0x0'), base=16)
+    receipt = call_contract(polyjuice_rpc_url, contract_address, input_data, sender=SENDER1, value=value)
     commit_tx(
         target_dir, ckb_bin_path, ckb_dir, ckb_rpc_url, privkey1_path,
         receipt,
+        polyjuice_rpc_url,
         'call-{}-{}'.format(contract_address, input_data)[:60],
     )
     tx_hash = receipt['tx_hash']
@@ -267,7 +276,7 @@ def get_tx_receipt(tx_hash: str) -> Dict:
 
 @jsonrpc.method('eth_accounts')
 def accounts() -> List[str]:
-    return ['0xc8328aabcd9b9e8e64fbc566c4385c3bdeb219d7']
+    return [eoa_accounts[SENDER1][0]]
 
 @jsonrpc.method('net_version')
 def version() -> str:
@@ -277,5 +286,7 @@ def version() -> str:
 
 if __name__ == '__main__':
     port = int(sys.argv[1])
+    print('[EoA lock args]: {}'.format(SENDER1))
+    print('[EoA account address]: {}'.format(eoa_account))
     print('[polyjuice url]: {}'.format(polyjuice_rpc_url))
     app.run(host='0.0.0.0', port=port, debug=True, threaded=False, processes=1)

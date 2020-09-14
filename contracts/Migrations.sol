@@ -17,7 +17,7 @@ contract DummyPriceOracle is PriceOracle {
    * @return The price of this renewal or registration, in wei.
    */
   function price(string calldata name, uint expires, uint duration) external view returns(uint) {
-    return 0;
+    return 200;
   }
 }
 
