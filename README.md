@@ -1,7 +1,7 @@
 
 ## Run polyjuice
 
-Please see: https://github.com/nervosnetwork/polyjuice/blob/a871596e02efed3ca86ba84346257fa2327defd1/README.md
+Please see: https://github.com/nervosnetwork/polyjuice/blob/b8aa0a931351ee4b9ccfa3dfd9634e3bb48996a0/README.md
 
 ## Deploy [ENS](https://ens.domains/) contracts
 
