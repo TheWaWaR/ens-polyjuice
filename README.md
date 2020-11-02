@@ -11,8 +11,8 @@ Install node first. (required version v10.22.0 (lts/dubnium))
 
 ``` bash
 git clone https://github.com/TheWaWaR/ens-polyjuice.git
-npm install -g truffle
-npm install
+yarn install -g truffle
+yarn install
 truffle compile
 ```
 
